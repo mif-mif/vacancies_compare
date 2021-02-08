@@ -20,21 +20,53 @@ def get_hh_requested_vacancies(requested_vacancy, page_number=1):
     return requested_vacancies, number_vacancies
 
 
+def get_sj_requested_vacancies(requested_vacancy, super_job_api_key, page_number=1):
+    payload = {'app_key': super_job_api_key,
+               'catalogues': 33,
+               'keyword': requested_vacancy,
+               'town': 4,
+               'page': page_number,
+               'count': 100}
+    vacancy_url = 'https://api.superjob.ru/2.0/vacancies'
+    response = requests.get(vacancy_url, payload)
+    response.raise_for_status()
+    requested_vacancies = response.json()['objects']
+    number_vacancies = response.json().get('total')
+    return requested_vacancies, number_vacancies
+
+
+def calculate_salary(vacancy_salary, vacancies_processed, total_salary, payment_from, payment_to):
+    if vacancy_salary.get(payment_from) and vacancy_salary.get(payment_to):
+        vacancies_processed += 1
+        total_salary += (vacancy_salary.get(payment_from) + vacancy_salary.get(payment_to)) / 2
+    elif vacancy_salary.get(payment_from):
+        vacancies_processed += 1
+        total_salary += vacancy_salary.get(payment_from) * 1.2
+    elif vacancy_salary.get(payment_to):
+        vacancies_processed += 1
+        total_salary += vacancy_salary.get(payment_to) * 0.8
+    return vacancies_processed, total_salary
+
+
 def predict_hh_rub_salary(requested_vacancies):
     vacancies_processed = 0
     total_salary = 0
     for vacancy in requested_vacancies:
         vacancy_salary = vacancy.get('salary')
         if vacancy_salary.get('currency') == 'RUR':
-            if vacancy_salary.get('from') and vacancy_salary.get('to'):
-                vacancies_processed += 1
-                total_salary += (vacancy_salary.get('from') + vacancy_salary.get('to')) / 2
-            elif vacancy_salary.get('from'):
-                vacancies_processed += 1
-                total_salary += vacancy_salary.get('from') * 1.2
-            elif vacancy_salary.get('to'):
-                vacancies_processed += 1
-                total_salary += vacancy_salary.get('to') * 0.8
+            vacancies_processed, total_salary = calculate_salary(vacancy_salary, vacancies_processed, total_salary, 'from', 'to')
+    average_salary = total_salary / vacancies_processed
+    return int(average_salary), vacancies_processed
+
+
+def predict_sj_rub_salary(requested_vacancies):
+    vacancies_processed = 0
+    total_salary = 0
+    for vacancy in requested_vacancies:
+        if not vacancy.get('payment_from') and not vacancy.get('payment_to'):
+            continue
+        else:
+            vacancies_processed, total_salary = calculate_salary(vacancy, vacancies_processed, total_salary, 'payment_from', 'payment_to')
     average_salary = total_salary / vacancies_processed
     return int(average_salary), vacancies_processed
 
@@ -54,40 +86,6 @@ def get_hh_developer_vacancies_summary(developer_vacancies):
                                                    'vacancies_processed': vacancies_processed,
                                                    'average_salary': average_salary}
     return hh_developer_vacancies_summary
-
-
-def get_sj_requested_vacancies(requested_vacancy, super_job_api_key, page_number=1):
-    payload = {'app_key': super_job_api_key,
-               'catalogues': 33,
-               'keyword': requested_vacancy,
-               'town': 4,
-               'page': page_number,
-               'count': 100}
-    vacancy_url = 'https://api.superjob.ru/2.0/vacancies'
-    response = requests.get(vacancy_url, payload)
-    response.raise_for_status()
-    requested_vacancies = response.json()['objects']
-    number_vacancies = response.json().get('total')
-    return requested_vacancies, number_vacancies
-
-
-def predict_sj_rub_salary(requested_vacancies):
-    vacancies_processed = 0
-    total_salary = 0
-    for vacancy in requested_vacancies:
-        if vacancy['payment_from'] and vacancy['payment_to']:
-            vacancies_processed += 1
-            total_salary += (vacancy['payment_from'] + vacancy['payment_to']) / 2
-        elif vacancy['payment_from']:
-            vacancies_processed += 1
-            total_salary += vacancy['payment_from'] * 1.2
-        elif vacancy['payment_to']:
-            vacancies_processed += 1
-            total_salary += vacancy['payment_from'] * 0.8
-        else:
-            continue
-    average_salary = total_salary / vacancies_processed
-    return int(average_salary), vacancies_processed
 
 
 def get_sj_developer_vacancies_summary(developer_vacancies, super_job_api_key):
