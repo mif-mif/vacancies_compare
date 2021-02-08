@@ -63,10 +63,7 @@ def predict_sj_rub_salary(requested_vacancies):
     vacancies_processed = 0
     total_salary = 0
     for vacancy in requested_vacancies:
-        if not vacancy.get('payment_from') and not vacancy.get('payment_to'):
-            continue
-        else:
-            vacancies_processed, total_salary = calculate_salary(vacancy, vacancies_processed, total_salary, 'payment_from', 'payment_to')
+        vacancies_processed, total_salary = calculate_salary(vacancy, vacancies_processed, total_salary, 'payment_from', 'payment_to')
     average_salary = total_salary / vacancies_processed
     return int(average_salary), vacancies_processed
 
@@ -79,8 +76,7 @@ def get_hh_developer_vacancies_summary(developer_vacancies):
         pages_amount = int(number_vacancies / 100) + 1
         for page in range(pages_amount):
             requested_vacancies = get_hh_requested_vacancies(vacancy, page_number=page)[0]
-            for job in requested_vacancies:
-                vacancy_summary.append(job)
+            vacancy_summary.extend(requested_vacancies)
         average_salary, vacancies_processed = predict_hh_rub_salary(vacancy_summary)
         hh_developer_vacancies_summary[vacancy] = {'vacancies_found': number_vacancies,
                                                    'vacancies_processed': vacancies_processed,
@@ -96,8 +92,7 @@ def get_sj_developer_vacancies_summary(developer_vacancies, super_job_api_key):
         pages_amount = int(number_vacancies / 100) + 1
         for page in range(pages_amount):
             requested_vacancies = get_sj_requested_vacancies(vacancy, super_job_api_key, page_number=page)[0]
-            for job in requested_vacancies:
-                vacancy_summary.append(job)
+            vacancy_summary.extend(requested_vacancies)
         average_salary, vacancies_processed = predict_sj_rub_salary(vacancy_summary)
         sj_developer_vacancies_summary[vacancy] = {'vacancies_found': number_vacancies,
                                                    'vacancies_processed': vacancies_processed,
