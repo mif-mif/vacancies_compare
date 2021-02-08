@@ -9,8 +9,8 @@ and displays it into two tables.
 ### How to install
 
 Taking information from [API HeadHunter](https://api.hh.ru) does not require any keys. To take information from 
-[API SuperJob](https://api.superjob.ru) you need to get [SuperJob Secret key](https://www.superjob.ru/auth/login/?returnUrl=https://api.superjob.ru/register/)
-Put them into `.env` file, and assign Secret key to the `SUPER_JOB_API_KEY` variable.
+[API SuperJob](https://api.superjob.ru) you need to get [SuperJob Secret key.](https://www.superjob.ru/auth/login/?returnUrl=https://api.superjob.ru/register/)
+Put it into `.env` file, and assign Secret key to the `SUPER_JOB_API_KEY` variable.
 It should look like this:
 
 ```
