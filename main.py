@@ -4,35 +4,37 @@ import os
 from terminaltables import AsciiTable
 
 
-def get_hh_requested_vacancies(requested_vacancy, page_number=1):
+def get_hh_requested_vacancies(requested_vacancy, town_id, days, page_number=1):
     payload = {'text': requested_vacancy,
                'page': page_number,
                'per_page': 100,
-               'area': 1,
-               'period': 30,
+               'area': town_id,
+               'period': days,
                'only_with_salary': True
                }
     requested_vacancy_url = 'https://api.hh.ru/vacancies'
     response = requests.get(requested_vacancy_url, payload)
     response.raise_for_status()
     requested_vacancies = response.json().get('items')
-    number_vacancies = response.json().get('found')
-    return requested_vacancies, number_vacancies
+    vacancy_numbers = response.json().get('found')
+    pages = response.json().get('pages')
+    return requested_vacancies, vacancy_numbers, pages
 
 
-def get_sj_requested_vacancies(requested_vacancy, super_job_api_key, page_number=1):
+def get_sj_requested_vacancies(requested_vacancy, super_job_api_key, catalog_id, town_id, page_number=1):
     payload = {'app_key': super_job_api_key,
-               'catalogues': 33,
+               'catalogues': catalog_id,
                'keyword': requested_vacancy,
-               'town': 4,
+               'town': town_id,
                'page': page_number,
                'count': 100}
     vacancy_url = 'https://api.superjob.ru/2.0/vacancies'
     response = requests.get(vacancy_url, payload)
     response.raise_for_status()
     requested_vacancies = response.json()['objects']
-    number_vacancies = response.json().get('total')
-    return requested_vacancies, number_vacancies
+    vacancy_numbers = response.json().get('total')
+    next_page_flag = response.json().get('more')
+    return requested_vacancies, vacancy_numbers, next_page_flag
 
 
 def calculate_salary(vacancy_salary, vacancies_processed, total_salary, payment_from, payment_to):
@@ -68,33 +70,36 @@ def predict_sj_rub_salary(requested_vacancies):
     return int(average_salary), vacancies_processed
 
 
-def get_hh_developer_vacancies_summary(developer_vacancies):
+def get_hh_developer_vacancies_summary(developer_vacancies, town_id, days):
     hh_developer_vacancies_summary = dict()
     for vacancy in developer_vacancies:
         vacancy_summary = []
-        number_vacancies = get_hh_requested_vacancies(vacancy)[1]
-        pages_amount = int(number_vacancies / 100) + 1
-        for page in range(pages_amount):
-            requested_vacancies = get_hh_requested_vacancies(vacancy, page_number=page)[0]
+        vacancy_numbers, pages = get_hh_requested_vacancies(vacancy, town_id, days)[1:]
+        page = 0
+        while page <= pages:
+            requested_vacancies = get_hh_requested_vacancies(vacancy, town_id, days, page_number=page)[0]
             vacancy_summary.extend(requested_vacancies)
+            page += 1
         average_salary, vacancies_processed = predict_hh_rub_salary(vacancy_summary)
-        hh_developer_vacancies_summary[vacancy] = {'vacancies_found': number_vacancies,
+        hh_developer_vacancies_summary[vacancy] = {'vacancies_found': vacancy_numbers,
                                                    'vacancies_processed': vacancies_processed,
                                                    'average_salary': average_salary}
     return hh_developer_vacancies_summary
 
 
-def get_sj_developer_vacancies_summary(developer_vacancies, super_job_api_key):
+def get_sj_developer_vacancies_summary(developer_vacancies, super_job_api_key, catalog_id, town_id):
     sj_developer_vacancies_summary = dict()
     for vacancy in developer_vacancies:
         vacancy_summary = []
-        number_vacancies = get_sj_requested_vacancies(vacancy, super_job_api_key)[1]
-        pages_amount = int(number_vacancies / 100) + 1
-        for page in range(pages_amount):
-            requested_vacancies = get_sj_requested_vacancies(vacancy, super_job_api_key, page_number=page)[0]
+        vacancy_numbers = get_sj_requested_vacancies(vacancy, super_job_api_key, catalog_id, town_id)[1]
+        next_page_flag = True
+        page = 0
+        while next_page_flag:
+            requested_vacancies, next_page_flag = get_sj_requested_vacancies(vacancy, super_job_api_key, catalog_id, town_id, page_number=page)[0::2]
             vacancy_summary.extend(requested_vacancies)
+            page += 1
         average_salary, vacancies_processed = predict_sj_rub_salary(vacancy_summary)
-        sj_developer_vacancies_summary[vacancy] = {'vacancies_found': number_vacancies,
+        sj_developer_vacancies_summary[vacancy] = {'vacancies_found': vacancy_numbers,
                                                    'vacancies_processed': vacancies_processed,
                                                    'average_salary': average_salary}
     return sj_developer_vacancies_summary
@@ -127,12 +132,16 @@ def main():
                            ]
 
     hh_title = 'HeadHunter Moscow'
-    hh_developer_vacancies_summary = get_hh_developer_vacancies_summary(developer_vacancies)
+    town_id = 1
+    days = 30
+    hh_developer_vacancies_summary = get_hh_developer_vacancies_summary(developer_vacancies, town_id, days)
     hh_vacancies_table = get_vacancies_table(hh_developer_vacancies_summary, hh_title)
     print(hh_vacancies_table)
 
     sj_title = 'SuperJob Moscow'
-    sj_developer_vacancies_summary = get_sj_developer_vacancies_summary(developer_vacancies, super_job_api_key)
+    catalog_id = 33
+    town_id = 4
+    sj_developer_vacancies_summary = get_sj_developer_vacancies_summary(developer_vacancies, super_job_api_key, catalog_id, town_id)
     sj_vacancies_table = get_vacancies_table(sj_developer_vacancies_summary, sj_title)
     print(sj_vacancies_table)
 
