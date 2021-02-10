@@ -29,4 +29,4 @@ python3 main.py
 
 
 ### Project Goals
-correct a typoThe code is written for educational purposes on online-course for web-developers [dvmn.org](https://dvmn.org)
+The code is written for educational purposes on online-course for web-developers [dvmn.org](https://dvmn.org)
