@@ -15,10 +15,11 @@ def get_hh_requested_vacancies(requested_vacancy, town_id, days, page_number=1):
     requested_vacancy_url = 'https://api.hh.ru/vacancies'
     response = requests.get(requested_vacancy_url, payload)
     response.raise_for_status()
-    requested_vacancies = response.json().get('items')
-    vacancy_numbers = response.json().get('found')
-    pages = response.json().get('pages')
-    return requested_vacancies, vacancy_numbers, pages
+    json_content = response.json()
+    requested_vacancies = json_content.get('items')
+    vacancies_amount = json_content.get('found')
+    pages_amount = json_content.get('pages')
+    return requested_vacancies, vacancies_amount, pages_amount
 
 
 def get_sj_requested_vacancies(requested_vacancy, super_job_api_key, catalog_id, town_id, page_number=1):
@@ -31,10 +32,11 @@ def get_sj_requested_vacancies(requested_vacancy, super_job_api_key, catalog_id,
     vacancy_url = 'https://api.superjob.ru/2.0/vacancies'
     response = requests.get(vacancy_url, payload)
     response.raise_for_status()
-    requested_vacancies = response.json()['objects']
-    vacancy_numbers = response.json().get('total')
-    next_page_flag = response.json().get('more')
-    return requested_vacancies, vacancy_numbers, next_page_flag
+    json_content = response.json()
+    requested_vacancies = json_content['objects']
+    vacancies_amount = json_content.get('total')
+    next_page_flag = json_content.get('more')
+    return requested_vacancies, vacancies_amount, next_page_flag
 
 
 def calculate_salary(vacancy_salary, vacancies_processed, total_salary, payment_from, payment_to):
@@ -74,14 +76,14 @@ def get_hh_developer_vacancies_summary(developer_vacancies, town_id, days):
     hh_developer_vacancies_summary = dict()
     for vacancy in developer_vacancies:
         vacancy_summary = []
-        vacancy_numbers, pages = get_hh_requested_vacancies(vacancy, town_id, days)[1:]
+        vacancies_amount, pages_amount = get_hh_requested_vacancies(vacancy, town_id, days)[1:]
         page = 0
-        while page <= pages:
+        while page <= pages_amount:
             requested_vacancies = get_hh_requested_vacancies(vacancy, town_id, days, page_number=page)[0]
             vacancy_summary.extend(requested_vacancies)
             page += 1
         average_salary, vacancies_processed = predict_hh_rub_salary(vacancy_summary)
-        hh_developer_vacancies_summary[vacancy] = {'vacancies_found': vacancy_numbers,
+        hh_developer_vacancies_summary[vacancy] = {'vacancies_found': vacancies_amount,
                                                    'vacancies_processed': vacancies_processed,
                                                    'average_salary': average_salary}
     return hh_developer_vacancies_summary
@@ -91,7 +93,7 @@ def get_sj_developer_vacancies_summary(developer_vacancies, super_job_api_key, c
     sj_developer_vacancies_summary = dict()
     for vacancy in developer_vacancies:
         vacancy_summary = []
-        vacancy_numbers = get_sj_requested_vacancies(vacancy, super_job_api_key, catalog_id, town_id)[1]
+        vacancies_amount = get_sj_requested_vacancies(vacancy, super_job_api_key, catalog_id, town_id)[1]
         next_page_flag = True
         page = 0
         while next_page_flag:
@@ -99,7 +101,7 @@ def get_sj_developer_vacancies_summary(developer_vacancies, super_job_api_key, c
             vacancy_summary.extend(requested_vacancies)
             page += 1
         average_salary, vacancies_processed = predict_sj_rub_salary(vacancy_summary)
-        sj_developer_vacancies_summary[vacancy] = {'vacancies_found': vacancy_numbers,
+        sj_developer_vacancies_summary[vacancy] = {'vacancies_found': vacancies_amount,
                                                    'vacancies_processed': vacancies_processed,
                                                    'average_salary': average_salary}
     return sj_developer_vacancies_summary
@@ -133,8 +135,8 @@ def main():
 
     hh_title = 'HeadHunter Moscow'
     town_id = 1
-    days = 30
-    hh_developer_vacancies_summary = get_hh_developer_vacancies_summary(developer_vacancies, town_id, days)
+    days_amount = 30
+    hh_developer_vacancies_summary = get_hh_developer_vacancies_summary(developer_vacancies, town_id, days_amount)
     hh_vacancies_table = get_vacancies_table(hh_developer_vacancies_summary, hh_title)
     print(hh_vacancies_table)
 
