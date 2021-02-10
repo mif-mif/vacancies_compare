@@ -4,12 +4,12 @@ import os
 from terminaltables import AsciiTable
 
 
-def get_hh_requested_vacancies(requested_vacancy, town_id, days, page_number=1):
+def get_hh_requested_vacancies(requested_vacancy, town_id, days_amount, page_number=1):
     payload = {'text': requested_vacancy,
                'page': page_number,
                'per_page': 100,
                'area': town_id,
-               'period': days,
+               'period': days_amount,
                'only_with_salary': True
                }
     requested_vacancy_url = 'https://api.hh.ru/vacancies'
@@ -76,19 +76,16 @@ def predict_sj_rub_salary(requested_vacancies):
     return average_salary, vacancies_processed
 
 
-def get_hh_developer_vacancies_summary(developer_vacancies, town_id, days):
+def get_hh_developer_vacancies_summary(developer_vacancies, town_id, days_amount):
     hh_developer_vacancies_summary = dict()
     for vacancy in developer_vacancies:
         vacancy_summary = []
-        vacancies_amount, pages_amount = get_hh_requested_vacancies(vacancy, town_id, days)[1:]
         page = 0
         pages_amount = 1
-        while True:
-            requested_vacancies, vacancies_amount, pages_amount = get_hh_requested_vacancies(vacancy, town_id, days, page_number=page)
+        while page <= pages_amount:
+            requested_vacancies, vacancies_amount, pages_amount = get_hh_requested_vacancies(vacancy, town_id, days_amount, page_number=page)
             vacancy_summary.extend(requested_vacancies)
             page += 1
-            if page > pages_amount:
-                break
         average_salary, vacancies_processed = predict_hh_rub_salary(vacancy_summary)
         hh_developer_vacancies_summary[vacancy] = {'vacancies_found': vacancies_amount,
                                                    'vacancies_processed': vacancies_processed,
