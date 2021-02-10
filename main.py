@@ -39,17 +39,15 @@ def get_sj_requested_vacancies(requested_vacancy, super_job_api_key, catalog_id,
     return requested_vacancies, vacancies_amount, next_page_flag
 
 
-def calculate_salary(vacancy_salary, vacancies_processed, total_salary, payment_from, payment_to):
-    if vacancy_salary.get(payment_from) and vacancy_salary.get(payment_to):
-        vacancies_processed += 1
-        total_salary += (vacancy_salary.get(payment_from) + vacancy_salary.get(payment_to)) / 2
-    elif vacancy_salary.get(payment_from):
-        vacancies_processed += 1
-        total_salary += vacancy_salary.get(payment_from) * 1.2
-    elif vacancy_salary.get(payment_to):
-        vacancies_processed += 1
-        total_salary += vacancy_salary.get(payment_to) * 0.8
-    return vacancies_processed, total_salary
+def calculate_salary(payment_from, payment_to):
+    salary = 0
+    if payment_from and payment_to:
+        salary = (payment_from + payment_to) / 2
+    elif payment_from:
+        salary = payment_from * 1.2
+    elif payment_to:
+        salary = payment_to * 0.8
+    return salary
 
 
 def predict_hh_rub_salary(requested_vacancies):
@@ -58,18 +56,24 @@ def predict_hh_rub_salary(requested_vacancies):
     for vacancy in requested_vacancies:
         vacancy_salary = vacancy.get('salary')
         if vacancy_salary.get('currency') == 'RUR':
-            vacancies_processed, total_salary = calculate_salary(vacancy_salary, vacancies_processed, total_salary, 'from', 'to')
-    average_salary = total_salary / vacancies_processed
-    return int(average_salary), vacancies_processed
+            salary = calculate_salary(vacancy['salary']['from'], vacancy['salary']['to'])
+            if salary:
+                vacancies_processed += 1
+                total_salary += salary
+    average_salary = int(total_salary / vacancies_processed)
+    return average_salary, vacancies_processed
 
 
 def predict_sj_rub_salary(requested_vacancies):
     vacancies_processed = 0
     total_salary = 0
     for vacancy in requested_vacancies:
-        vacancies_processed, total_salary = calculate_salary(vacancy, vacancies_processed, total_salary, 'payment_from', 'payment_to')
-    average_salary = total_salary / vacancies_processed
-    return int(average_salary), vacancies_processed
+        salary = calculate_salary(vacancy['payment_from'], vacancy['payment_to'])
+        if salary:
+            vacancies_processed += 1
+            total_salary += salary
+    average_salary = int(total_salary / vacancies_processed)
+    return average_salary, vacancies_processed
 
 
 def get_hh_developer_vacancies_summary(developer_vacancies, town_id, days):
