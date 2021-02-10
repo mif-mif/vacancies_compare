@@ -82,10 +82,13 @@ def get_hh_developer_vacancies_summary(developer_vacancies, town_id, days):
         vacancy_summary = []
         vacancies_amount, pages_amount = get_hh_requested_vacancies(vacancy, town_id, days)[1:]
         page = 0
-        while page <= pages_amount:
-            requested_vacancies = get_hh_requested_vacancies(vacancy, town_id, days, page_number=page)[0]
+        pages_amount = 1
+        while True:
+            requested_vacancies, vacancies_amount, pages_amount = get_hh_requested_vacancies(vacancy, town_id, days, page_number=page)
             vacancy_summary.extend(requested_vacancies)
             page += 1
+            if page > pages_amount:
+                break
         average_salary, vacancies_processed = predict_hh_rub_salary(vacancy_summary)
         hh_developer_vacancies_summary[vacancy] = {'vacancies_found': vacancies_amount,
                                                    'vacancies_processed': vacancies_processed,
@@ -97,11 +100,10 @@ def get_sj_developer_vacancies_summary(developer_vacancies, super_job_api_key, c
     sj_developer_vacancies_summary = dict()
     for vacancy in developer_vacancies:
         vacancy_summary = []
-        vacancies_amount = get_sj_requested_vacancies(vacancy, super_job_api_key, catalog_id, town_id)[1]
         next_page_flag = True
         page = 0
         while next_page_flag:
-            requested_vacancies, next_page_flag = get_sj_requested_vacancies(vacancy, super_job_api_key, catalog_id, town_id, page_number=page)[0::2]
+            requested_vacancies, vacancies_amount, next_page_flag = get_sj_requested_vacancies(vacancy, super_job_api_key, catalog_id, town_id, page_number=page)
             vacancy_summary.extend(requested_vacancies)
             page += 1
         average_salary, vacancies_processed = predict_sj_rub_salary(vacancy_summary)
