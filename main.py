@@ -15,10 +15,10 @@ def get_hh_requested_vacancies(requested_vacancy, town_id, days_amount, page_num
     requested_vacancy_url = 'https://api.hh.ru/vacancies'
     response = requests.get(requested_vacancy_url, payload)
     response.raise_for_status()
-    json_content = response.json()
-    requested_vacancies = json_content.get('items')
-    vacancies_amount = json_content.get('found')
-    pages_amount = json_content.get('pages')
+    server_response = response.json()
+    requested_vacancies = server_response.get('items')
+    vacancies_amount = server_response.get('found')
+    pages_amount = server_response.get('pages')
     return requested_vacancies, vacancies_amount, pages_amount
 
 
@@ -32,10 +32,10 @@ def get_sj_requested_vacancies(requested_vacancy, super_job_api_key, catalog_id,
     vacancy_url = 'https://api.superjob.ru/2.0/vacancies'
     response = requests.get(vacancy_url, payload)
     response.raise_for_status()
-    json_content = response.json()
-    requested_vacancies = json_content['objects']
-    vacancies_amount = json_content.get('total')
-    next_page_flag = json_content.get('more')
+    server_response = response.json()
+    requested_vacancies = server_response['objects']
+    vacancies_amount = server_response.get('total')
+    next_page_flag = server_response.get('more')
     return requested_vacancies, vacancies_amount, next_page_flag
 
 
@@ -55,11 +55,13 @@ def predict_hh_rub_salary(requested_vacancies):
     total_salary = 0
     for vacancy in requested_vacancies:
         vacancy_salary = vacancy.get('salary')
-        if vacancy_salary.get('currency') == 'RUR':
-            salary = calculate_salary(vacancy['salary']['from'], vacancy['salary']['to'])
-            if salary:
-                vacancies_processed += 1
-                total_salary += salary
+        if vacancy_salary.get('currency') != 'RUR':
+            continue
+        salary = calculate_salary(vacancy['salary']['from'], vacancy['salary']['to'])
+        if not salary:
+            continue
+        vacancies_processed += 1
+        total_salary += salary
     average_salary = int(total_salary / vacancies_processed)
     return average_salary, vacancies_processed
 
@@ -69,9 +71,10 @@ def predict_sj_rub_salary(requested_vacancies):
     total_salary = 0
     for vacancy in requested_vacancies:
         salary = calculate_salary(vacancy['payment_from'], vacancy['payment_to'])
-        if salary:
-            vacancies_processed += 1
-            total_salary += salary
+        if not salary:
+            continue
+        vacancies_processed += 1
+        total_salary += salary
     average_salary = int(total_salary / vacancies_processed)
     return average_salary, vacancies_processed
 
