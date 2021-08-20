@@ -139,6 +139,9 @@ def main():
                            'Ruby'
                            ]
 
+
+
+
     hh_title = 'HeadHunter Moscow'
     town_id = 1
     days_amount = 30
